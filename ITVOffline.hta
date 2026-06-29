@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 3.0</title>
+<title>ITVControl ERP 3.1</title>
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -30,7 +30,8 @@ th{background:#222;color:white;padding:2px 4px;}
 .cita.primera{background:#8cf58c;border-left:3px solid #2e7d32;}
 .cita.segunda{background:#c1dbc1;border-left:3px solid #555;}
 .cita.sinvehiculo{background:#edb96f;border-left:3px solid #d4a000;}
-#url {display: none;}#btnSync {display: none;}
+#url{display:none;}
+#btnSync{display:none;}
 </style>
 
 <script>
@@ -40,15 +41,11 @@ var currentDate = new Date();
 var INDEX = {};
 var VEH_INDEX = {};
 
-/* ========================= */
-/* TIEMPO AUTOSYNC */
-/* ========================= */
-
 var SYNC_INTERVAL = 300;
 var syncLeft = SYNC_INTERVAL;
 
 /* ========================= */
-/* CACHE PATH */
+/* RUTAS DE ARCHIVOS         */
 /* ========================= */
 
 function getCachePath(){
@@ -57,107 +54,83 @@ function getCachePath(){
 }
 
 function getConfigPath(){
-
     var fso = new ActiveXObject("Scripting.FileSystemObject");
     return fso.GetParentFolderName(location.pathname) + "\\config.xk";
-
 }
+
+/* ========================= */
+/* CLAVE DE SINCRONIZACIÓN   */
+/* ========================= */
 
 function cambiarClaveSync(){
 
     var clave = prompt("Nueva clave de sincronizacion:", "");
+    if(clave == null) return;
 
-    if(clave==null) return;
+    clave = clave.replace(/^\s+|\s+$/g, "");
 
-    clave = clave.replace(/^\s+|\s+$/g,"");
-
-    if(clave==""){
+    if(clave == ""){
         alert("No se ha introducido ninguna clave.");
         return;
     }
 
     var url = "http://www.LAWEB-o-IPSERVIDOR.com/itv/sync_offline.php?key=" + escape(clave);
-
     document.getElementById("url").value = url;
 
     try{
-
         var fso = new ActiveXObject("Scripting.FileSystemObject");
         var f = fso.CreateTextFile(getConfigPath(), true);
-
         f.Write(url);
         f.Close();
-
     }catch(e){}
 
     sincronizar();
-
 }
 
 /* ========================= */
-/* GUARDAR CACHE (FORMATO LEGACY SEGURO) */
+/* CACHÉ                     */
 /* ========================= */
 
 function guardarCache(){
-
     try{
         if(!DATOS) return;
-
         var fso = new ActiveXObject("Scripting.FileSystemObject");
         var file = fso.CreateTextFile(getCachePath(), true);
-
-        // 🔥 SERIALIZACIÓN MANUAL (NO JSON)
-        var txt = "DATOS=" + objToString(DATOS);
-
-        file.Write(txt);
+        file.Write("DATOS=" + objToString(DATOS));
         file.Close();
-
     }catch(e){
-        var e1 = document.getElementById("estado");
-        if(e1) e1.innerHTML = "ERROR CACHE WRITE";
+        var el = document.getElementById("estado");
+        if(el) el.innerHTML = "ERROR CACHE WRITE";
     }
 }
 
-/* ========================= */
-/* CARGAR CACHE */
-/* ========================= */
-
 function cargarCache(){
-
     try{
-
         var fso = new ActiveXObject("Scripting.FileSystemObject");
         var path = getCachePath();
-
         if(!fso.FileExists(path)) return false;
-
         var file = fso.OpenTextFile(path, 1);
         var txt = file.ReadAll();
         file.Close();
-
         if(!txt || txt.indexOf("DATOS=") == -1) return false;
-
-        eval(txt); // 🔥 carga DATOS directamente
-
+        eval(txt);
         return (DATOS && DATOS.citas && DATOS.vehiculos);
-
     }catch(e){
         return false;
     }
 }
 
 /* ========================= */
-/* OBJ -> STRING (SEGURÍSIMO PARA HTA) */
+/* SERIALIZACIÓN MANUAL      */
 /* ========================= */
 
 function objToString(obj){
-
     if(obj === null) return "null";
     if(typeof obj !== "object") return "'" + obj + "'";
 
     if(obj instanceof Array){
         var a = [];
-        for(var i=0;i<obj.length;i++){
+        for(var i = 0; i < obj.length; i++){
             a.push(objToString(obj[i]));
         }
         return "[" + a.join(",") + "]";
@@ -169,47 +142,37 @@ function objToString(obj){
             s.push("'" + k + "':" + objToString(obj[k]));
         }
     }
-
     return "{" + s.join(",") + "}";
 }
 
 /* ========================= */
-
-/* ========================= */
-/* FONDO DINÁMICO */
+/* FONDO DINÁMICO            */
 /* ========================= */
 
 function fondoOnline(){
-    document.body.style.backgroundImage =
-        "url('fonon.xk?t=" + new Date().getTime() + "')";
+    document.body.style.backgroundImage = "url('fonon.xk?t=" + new Date().getTime() + "')";
 }
 
 function fondoOffline(){
-    document.body.style.backgroundImage =
-        "url('fonof.xk')";
+    document.body.style.backgroundImage = "url('fonof.xk')";
 }
 
 /* ========================= */
+/* INICIO                    */
+/* ========================= */
+
 function start(){
+    try{
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        if(fso.FileExists(getConfigPath())){
+            var f = fso.OpenTextFile(getConfigPath(), 1);
+            document.getElementById("url").value = f.ReadAll();
+            f.Close();
+        }
+    }catch(e){}
 
-try{
-
-    var fso = new ActiveXObject("Scripting.FileSystemObject");
-
-    if(fso.FileExists(getConfigPath())){
-
-        var f = fso.OpenTextFile(getConfigPath(),1);
-
-        document.getElementById("url").value = f.ReadAll();
-
-        f.Close();
-
-    }
-
-}catch(e){}
-
-    window.resizeTo(1050,700);
-    window.moveTo(-2,4);
+    window.resizeTo(1050, 700);
+    window.moveTo(-2, 4);
 
     if(cargarCache()){
         buildIndex();
@@ -218,16 +181,15 @@ try{
     }
 
     sincronizar();
-
     setInterval(sincronizar, SYNC_INTERVAL * 1000);
     setInterval(updateCountdown, 1000);
-	
 }
 
 /* ========================= */
+/* CUENTA ATRÁS SYNC         */
+/* ========================= */
 
 function updateCountdown(){
-
     syncLeft--;
     if(syncLeft <= 0) syncLeft = SYNC_INTERVAL;
 
@@ -236,169 +198,17 @@ function updateCountdown(){
 
     var m = Math.floor(syncLeft / 60);
     var s = syncLeft % 60;
-
-    el.innerHTML = "Proxima sync en: " + m + ":" + (s<10?"0":"") + s;
+    el.innerHTML = "Proxima sync en: " + m + ":" + (s < 10 ? "0" : "") + s;
 }
 
 /* ========================= */
+/* SINCRONIZACIÓN            */
+/* ========================= */
 
-function sincronizar(){
-
-    try{
-
-        // 🔴 CLAVE: forzar instancia limpia SIEMPRE
-        var xhr = new ActiveXObject("MSXML2.XMLHTTP.6.0");
-
-var url = document.getElementById("url").value;
-url += (url.indexOf("?")>-1 ? "&" : "?") + "t=" + new Date().getTime();
-
-xhr.open("GET", url, true);
-
-xhr.onreadystatechange = function () {
-
-    if(xhr.readyState != 4) return;
-
+function mostrarOffline(fechaSync){
+    fondoOffline();
     var estado = document.getElementById("estado");
-
-    try{
-
-        var fechaSync = "";
-
-        if(DATOS && DATOS.fecha_sync){
-            fechaSync = DATOS.fecha_sync.replace(
-                /^(\d{4})-(\d{2})-(\d{2})/,
-                "$3-$2-$1"
-            );
-        }
-
-        if(xhr.status != 200 || !xhr.responseText){
-
-            if(cargarCache()){
-                buildIndex();
-                pintarCalendario();
-            }
-
-            fondoOffline();
-
-            if(estado){
-                estado.innerHTML =
-                    "<span style='color:#f20713;font-size:20px;font-weight:bold;'>OFFLINE</span>" +
-                    "<span style='display:inline-block;margin-left:10px;font-size:9px;color:gray;vertical-align:top;'>" +
-                    "Mostrando datos de CACHE<br>" +
-                    "Ultima sincronizacion: " + fechaSync +
-                    "</span>";
-            }
-
-            return;
-        }
-
-        var txt = xhr.responseText;
-
-        if(txt.length < 50 || txt.indexOf("citas") == -1){
-
-            if(cargarCache()){
-                buildIndex();
-                pintarCalendario();
-            }
-
-            fondoOffline();
-
-            if(estado){
-                estado.innerHTML = "<span style='color:orange;font-weight:bold;'>OFFLINE CACHE</span>";
-            }
-
-            return;
-        }
-
-        DATOS = eval("(" + txt + ")");
-
-        guardarCache();
-        buildIndex();
-
-        syncLeft = SYNC_INTERVAL;
-
-        if(estado){
-    estado.innerHTML = "<span style='color:#07f207;font-size:20px;font-weight:bold;'>ONLINE</span>";
-}
-
-fondoOnline();
-
-pintarCalendario();
-
-    } catch(e){
-
-            if(cargarCache()){
-                buildIndex();
-                pintarCalendario();
-            }
-
-            fondoOffline();
-    }
-};
-
-xhr.send();
-
-
-        
-
-        // 🔴 VALIDACIÓN REAL DE DATOS
-        var txt = xhr.responseText;
-
-        if(txt.length < 50 || txt.indexOf("citas") == -1){
-
-            if(cargarCache()){
-                buildIndex();
-                pintarCalendario();
-            }
-
-            fondoOffline();
-
-            if(estado){
-                estado.innerHTML = "<span style='color:orange;font-weight:bold;'>OFFLINE CACHE</span>";
-            }
-
-            return;
-        }
-
-        DATOS = eval("(" + txt + ")");
-
-        guardarCache();
-
-        buildIndex();
-
-        syncLeft = SYNC_INTERVAL;
-
-        if(estado){
-    estado.innerHTML = "<span style='color:#07f207;font-size:20px;font-weight:bold;'>ONLINE</span>";
-}
-
-fondoOnline();
-
-pintarCalendario();
-
-    }catch(e){
-
-        var estado = document.getElementById("estado");
-
-            if(cargarCache()){
-                buildIndex();
-                pintarCalendario();
-            }
-
-            fondoOffline();
-
-        if(estado){
-
-    var fechaSync = "";
-
-if(DATOS && DATOS.fecha_sync){
-
-    fechaSync = DATOS.fecha_sync.replace(
-        /^(\d{4})-(\d{2})-(\d{2})/,
-        "$3-$2-$1"
-    );
-}
-
+    if(!estado) return;
     estado.innerHTML =
         "<span style='color:#f20713;font-size:20px;font-weight:bold;'>OFFLINE</span>" +
         "<span style='display:inline-block;margin-left:10px;font-size:9px;color:gray;vertical-align:top;'>" +
@@ -406,59 +216,98 @@ if(DATOS && DATOS.fecha_sync){
             "Ultima sincronizacion: " + fechaSync +
         "</span>";
 }
+
+function getFechaSync(){
+    if(!DATOS || !DATOS.fecha_sync) return "";
+    return DATOS.fecha_sync.replace(/^(\d{4})-(\d{2})-(\d{2})/, "$3-$2-$1");
+}
+
+function sincronizar(){
+    try{
+        var xhr = new ActiveXObject("MSXML2.XMLHTTP.6.0");
+        var url = document.getElementById("url").value;
+        url += (url.indexOf("?") > -1 ? "&" : "?") + "t=" + new Date().getTime();
+
+        xhr.open("GET", url, true);
+
+        xhr.onreadystatechange = function(){
+            if(xhr.readyState != 4) return;
+
+            try{
+                if(xhr.status != 200 || !xhr.responseText){
+                    if(cargarCache()){ buildIndex(); pintarCalendario(); }
+                    mostrarOffline(getFechaSync());
+                    return;
+                }
+
+                var txt = xhr.responseText;
+                if(txt.length < 50 || txt.indexOf("citas") == -1){
+                    if(cargarCache()){ buildIndex(); pintarCalendario(); }
+                    fondoOffline();
+                    var estado = document.getElementById("estado");
+                    if(estado) estado.innerHTML = "<span style='color:orange;font-weight:bold;'>OFFLINE CACHE</span>";
+                    return;
+                }
+
+                DATOS = eval("(" + txt + ")");
+                guardarCache();
+                buildIndex();
+                syncLeft = SYNC_INTERVAL;
+
+                var estado = document.getElementById("estado");
+                if(estado) estado.innerHTML = "<span style='color:#07f207;font-size:20px;font-weight:bold;'>ONLINE</span>";
+
+                fondoOnline();
+                pintarCalendario();
+
+            }catch(e){
+                if(cargarCache()){ buildIndex(); pintarCalendario(); }
+                mostrarOffline(getFechaSync());
+            }
+        };
+
+        xhr.send();
+
+    }catch(e){
+        if(cargarCache()){ buildIndex(); pintarCalendario(); }
+        mostrarOffline(getFechaSync());
     }
 }
 
+/* ========================= */
+/* ÍNDICES                   */
 /* ========================= */
 
 function normDate(f){
     if(!f) return "";
     return f.split(" ")[0];
 }
-function formatearFechaSync(txt){
-
-    if(!txt) return "";
-
-    var partes = txt.split(" ");
-    var fecha = partes[0].split("-");
-
-    if(fecha.length != 3) return txt;
-
-    return fecha[2] + "-" + fecha[1] + "-" + fecha[0] +
-           (partes[1] ? " " + partes[1] : "");
-}
-
-/* ========================= */
 
 function buildIndex(){
-
     INDEX = {};
     VEH_INDEX = {};
-
     if(!DATOS) return;
 
-    for(var i=0;i<DATOS.citas.length;i++){
+    for(var i = 0; i < DATOS.citas.length; i++){
         var c = DATOS.citas[i];
         var d = normDate(c.fecha_cita);
         if(!INDEX[d]) INDEX[d] = [];
         INDEX[d].push(c);
     }
 
-    for(var j=0;j<DATOS.vehiculos.length;j++){
+    for(var j = 0; j < DATOS.vehiculos.length; j++){
         VEH_INDEX[DATOS.vehiculos[j].matricula] = DATOS.vehiculos[j];
     }
 }
 
 /* ========================= */
-/* CALENDARIO (SIN CAMBIOS) */
+/* CALENDARIO                */
 /* ========================= */
 
 function cambiarMes(n){
-    currentDate.setMonth(currentDate.getMonth()+n);
+    currentDate.setMonth(currentDate.getMonth() + n);
     pintarCalendario();
 }
-
-/* ========================= */
 
 function pintarCalendario(){
 
@@ -468,25 +317,30 @@ function pintarCalendario(){
     var y = currentDate.getFullYear();
     var m = currentDate.getMonth();
 
-    var first = new Date(y,m,1);
-    var last = new Date(y,m+1,0);
+    var first = new Date(y, m, 1);
+    var last  = new Date(y, m + 1, 0);
+    var dias  = last.getDate();
 
-    var dias = last.getDate();
     var start = first.getDay();
-    if(start==0) start=7;
+    if(start == 0) start = 7;
 
-    var meses=["Enero","Febrero","Marzo","Abril","Mayo","Junio",
-               "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+    var meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio",
+                 "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
     var hoy = new Date();
-    hoy.setHours(0,0,0,0);
+    hoy.setHours(0, 0, 0, 0);
+    var hoyStr = hoy.getFullYear() + "-" +
+                 ("0" + (hoy.getMonth() + 1)).slice(-2) + "-" +
+                 ("0" + hoy.getDate()).slice(-2);
 
-    var hoyStr = hoy.getFullYear()+"-"+("0"+(hoy.getMonth()+1)).slice(-2)+"-"+("0"+hoy.getDate()).slice(-2);
+    var ahora      = new Date();
+    var anoActual  = ahora.getFullYear();
+    var mesActual  = ahora.getMonth();
 
     var html = "";
 
     html += "<div class='header'><div class='title'>MES VISUALIZADO</div>";
-    html += "<div>"+meses[m]+" "+y+"</div>";
+    html += "<div>" + meses[m] + " " + y + "</div>";
     html += "<div id='countdown'></div></div>";
 
     html += "<div class='nav'>";
@@ -497,100 +351,71 @@ function pintarCalendario(){
 
     html += "<table><tr><th>Lun</th><th>Mar</th><th>Mie</th><th>Jue</th><th>Vie</th><th>Sab</th><th>Dom</th></tr><tr>";
 
-    var day=1;
+    var day = 1;
 
-    for(var i=1;i<=42;i++){
+    for(var i = 1; i <= 42; i++){
 
-        if(i>=start && day<=dias){
+        if(i >= start && day <= dias){
 
-            var dateStr = y+"-"+("0"+(m+1)).slice(-2)+"-"+("0"+day).slice(-2);
+            var dateStr = y + "-" +
+                          ("0" + (m + 1)).slice(-2) + "-" +
+                          ("0" + day).slice(-2);
 
-            var cell = "<b>"+day+"</b>";
-
+            var cell = "<b>" + day + "</b>";
             var list = INDEX[dateStr];
 
             if(list){
-                // cell += "<div class='badge'>"+list.length+"</div>";
-
-                for(var k=0;k<list.length;k++){
+                for(var k = 0; k < list.length; k++){
 
                     var c = list[k];
 
-/* 🔥 FILTRO TIEMPO (oculta citas > 1h pasadas) */
-if(c.hora_cita){
+                    if(c.hora_cita){
+                        var partes   = c.fecha_cita.split(" ")[0].split("-");
+                        var hora     = c.hora_cita.split(":");
+                        var citaDate = new Date(
+                            parseInt(partes[0]),
+                            parseInt(partes[1]) - 1,
+                            parseInt(partes[2]),
+                            parseInt(hora[0]),
+                            parseInt(hora[1])
+                        );
+                        var diffMin = (ahora - citaDate) / 60000;
 
-    var ahora = new Date();
+                        // Ocultar meses anteriores al actual
+                        if(y < anoActual || (y == anoActual && m < mesActual)) continue;
 
-    var partes = c.fecha_cita.split(" ")[0].split("-");
-    var hora = c.hora_cita.split(":");
+                        // En el mes actual, ocultar citas de hace más de 1 hora
+                        if(y == anoActual && m == mesActual && diffMin > 60) continue;
+                    }
 
-    var citaDate = new Date(
-        parseInt(partes[0]),
-        parseInt(partes[1]) - 1,
-        parseInt(partes[2]),
-        parseInt(hora[0]),
-        parseInt(hora[1])
-    );
+                    var v          = VEH_INDEX[c.vehiculo];
+                    var nombre     = v ? v.vehiculo : c.vehiculo;
+                    var esSegunda  = (c.tipo_cita == "Segunda");
+                    var sinVehiculo = (!c.vehiculo || c.vehiculo.replace(/^\s+|\s+$/g, "") == "");
 
-    var diffMin = (ahora - citaDate) / 60000;
+                    var clase    = sinVehiculo ? "sinvehiculo" : (esSegunda ? "segunda" : "primera");
+                    var vehTexto = sinVehiculo ? "SIN VEHICULO" : nombre;
 
-var anoActual = ahora.getFullYear();
-var mesActual = ahora.getMonth();
-
-var anoVista = y;
-var mesVista = m;
-
-// Ocultar completamente meses anteriores
-if(
-    anoVista < anoActual ||
-    (anoVista == anoActual && mesVista < mesActual)
-){
-    continue;
-}
-
-// En el mes actual, ocultar citas de hace más de 1 hora
-if(
-    anoVista == anoActual &&
-    mesVista == mesActual &&
-    diffMin > 60
-){
-    continue;
-}
-}
-
-var v = VEH_INDEX[c.vehiculo];
-
-var nombre = v ? v.vehiculo : c.vehiculo;
-
-var esSegunda = (c.tipo_cita == "Segunda");
-var sinVehiculo = (!c.vehiculo || c.vehiculo.replace(/^\s+|\s+$/g,'') == "");
-
-var clase = sinVehiculo ? "sinvehiculo"
-            : (esSegunda ? "segunda" : "primera");
-
-var vehTexto = sinVehiculo ? "SIN VEHICULO" : nombre;
-
-cell += "<div class='cita " + clase + "'>"
-    + c.hora_cita + " - "
-    + vehTexto + " - "
-    + c.estacion_cita + " "
-    + (esSegunda ? "2" : "1")
-+ "</div>";
+                    cell += "<div class='cita " + clase + "'>"
+                          + c.hora_cita + " - "
+                          + vehTexto + " - "
+                          + c.estacion_cita + " "
+                          + (esSegunda ? "2" : "1")
+                          + "</div>";
                 }
             }
 
-            html += "<td"+(dateStr==hoyStr?" class='hoy'":"")+">"+cell+"</td>";
+            html += "<td" + (dateStr == hoyStr ? " class='hoy'" : "") + ">" + cell + "</td>";
             day++;
 
-        } else {
+        }else{
             html += "<td></td>";
         }
 
-        if(i%7==0) html+="</tr><tr>";
+        if(i % 7 == 0) html += "</tr><tr>";
     }
 
-    html+="</tr></table>";
-
+    html += "</tr></table>";
     el.innerHTML = html;
 }
 
@@ -606,10 +431,7 @@ cell += "<div class='cita " + clase + "'>"
 
 <p id="estado">Conectando...</p>
 
-<input id="url" size="80"
-value=""
-/>
-
+<input id="url" size="80" value="" />
 <button id="btnSync" onclick="sincronizar()">Sync ahora</button>
 <button onclick="cambiarClaveSync()">Cambiar clave Sync</button>
 
