@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 3.1</title>
+<title>ITVControl ERP 3.2</title>
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -280,7 +280,15 @@ function sincronizar(){
 
 function normDate(f){
     if(!f) return "";
-    return f.split(" ")[0];
+    /* Antes: return f.split(" ")[0];
+       Problema: si fecha_cita trae espacios sobrantes, caracteres
+       invisibles (NBSP, etc.) u otro formato al principio, split(" ")[0]
+       podia devolver "" o basura, y la cita se indexaba bajo una clave
+       que el calendario nunca consulta (se queda invisible en su celda).
+       Ahora: extraemos el patron AAAA-MM-DD este donde este dentro de
+       la cadena, ignorando cualquier caracter sobrante alrededor. */
+    var m = ("" + f).match(/\d{4}-\d{2}-\d{2}/);
+    return m ? m[0] : "";
 }
 
 function buildIndex(){
@@ -291,6 +299,7 @@ function buildIndex(){
     for(var i = 0; i < DATOS.citas.length; i++){
         var c = DATOS.citas[i];
         var d = normDate(c.fecha_cita);
+        if(!d) continue;
         if(!INDEX[d]) INDEX[d] = [];
         INDEX[d].push(c);
     }
@@ -299,6 +308,7 @@ function buildIndex(){
         VEH_INDEX[DATOS.vehiculos[j].matricula] = DATOS.vehiculos[j];
     }
 }
+
 
 /* ========================= */
 /* CALENDARIO                */
@@ -373,11 +383,11 @@ function pintarCalendario(){
                         var partes   = c.fecha_cita.split(" ")[0].split("-");
                         var hora     = c.hora_cita.split(":");
                         var citaDate = new Date(
-                            parseInt(partes[0]),
-                            parseInt(partes[1]) - 1,
-                            parseInt(partes[2]),
-                            parseInt(hora[0]),
-                            parseInt(hora[1])
+                            parseInt(partes[0], 10),
+                            parseInt(partes[1], 10) - 1,
+                            parseInt(partes[2], 10),
+                            parseInt(hora[0], 10),
+                            parseInt(hora[1], 10)
                         );
                         var diffMin = (ahora - citaDate) / 60000;
 
