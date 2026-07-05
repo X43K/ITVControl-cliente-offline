@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 3.2</title>
+<title>ITVControl ERP 4.0</title>
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -171,7 +171,7 @@ function start(){
         }
     }catch(e){}
 
-    window.resizeTo(1050, 700);
+    window.resizeTo(1050, 750);
     window.moveTo(-2, 4);
 
     if(cargarCache()){
@@ -426,7 +426,116 @@ function pintarCalendario(){
     }
 
     html += "</tr></table>";
+
+    html += alertaCaducidades();
+
     el.innerHTML = html;
+}
+
+function alertaCaducidades(){
+
+    if(!DATOS || !DATOS.vehiculos) return "";
+
+    var hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    var lista = [];
+
+    for(var i=0;i<DATOS.vehiculos.length;i++){
+
+        var v = DATOS.vehiculos[i];
+
+        if(!v.caducidad_itv) continue;
+        if(v.estado!="ACTIVO") continue;
+
+        var p = v.caducidad_itv.split("-");
+        if(p.length!=3) continue;
+
+        var fecha = new Date(
+            parseInt(p[0],10),
+            parseInt(p[1],10)-1,
+            parseInt(p[2],10)
+        );
+
+        fecha.setHours(0,0,0,0);
+
+        var dias = Math.floor((fecha-hoy)/86400000);
+
+        if(dias>=0 && dias<=20){
+
+            lista.push({
+                dias:dias,
+                matricula:v.matricula,
+                vehiculo:v.vehiculo,
+                flota:v.flota,
+                fecha:v.caducidad_itv
+            });
+
+        }
+
+    }
+
+    lista.sort(function(a,b){
+        return a.dias-b.dias;
+    });
+
+    var html="";
+
+    html+="<div style='margin-top:12px;padding:10px;border:1px solid #999;background:#f5f5f5'>";
+    html+="<div style='font-size:16px;font-weight:bold;margin-bottom:8px'>";
+    html+="ITVs que caducan en los proximos 20 dias";
+    html+="</div>";
+
+    if(lista.length==0){
+
+        html+="<span style='color:green;font-weight:bold'>";
+        html+="No hay vehículos próximos a caducar.";
+        html+="</span>";
+
+    }else{
+
+        for(var i=0;i<lista.length;i++){
+
+            var c=lista[i];
+
+            var color="#fff27a";      // Amarillo (8-15 días)
+
+            if(c.dias<=5)
+                color="#ff8a8a";      // Rojo
+            else if(c.dias<=7)
+                color="#ffd07a";      // Naranja
+
+            html+="<div style='background:"+color+";padding:5px;margin-bottom:4px;border-left:6px solid red;'>";
+
+            html+="<b>"+c.matricula+"</b>";
+
+            html+=" &nbsp; Vehiculo <b>"+c.vehiculo+"</b>";
+
+            html+=" &nbsp; ("+c.flota+")";
+
+            html+=" &nbsp; Caduca el <b>"+c.fecha+"</b>";
+
+            html+=" &nbsp; <span style='color:#b00000;font-weight:bold'>";
+
+            if(c.dias==0)
+                html+="HOY";
+            else if(c.dias==1)
+                html+="MAÑANA";
+            else
+                html+="EN "+c.dias+" DIAS";
+
+            html+="</span>";
+
+            html+="</div>";
+
+        }
+
+    }
+
+    html+="</div>";
+
+    return html;
+
 }
 
 </script>
