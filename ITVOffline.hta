@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.0</title>
+<title>ITVControl ERP 4.1</title>
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -440,11 +440,22 @@ function alertaCaducidades(){
     hoy.setHours(0,0,0,0);
 
     var lista = [];
+    var rechazadas = [];
 
     for(var i=0;i<DATOS.vehiculos.length;i++){
 
         var v = DATOS.vehiculos[i];
 
+        // 🔴 RECHAZADAS
+        if(v.estado && v.estado.replace(/^\s+|\s+$/g,"")=="ITV RECHAZADA"){
+            rechazadas.push({
+                matricula:v.matricula,
+                vehiculo:v.vehiculo,
+                flota:v.flota
+            });
+        }
+
+        // 🟡 CADUCIDAD
         if(!v.caducidad_itv) continue;
         if(v.estado!="ACTIVO") continue;
 
@@ -462,7 +473,6 @@ function alertaCaducidades(){
         var dias = Math.floor((fecha-hoy)/86400000);
 
         if(dias>=0 && dias<=20){
-
             lista.push({
                 dias:dias,
                 matricula:v.matricula,
@@ -470,72 +480,73 @@ function alertaCaducidades(){
                 flota:v.flota,
                 fecha:v.caducidad_itv
             });
-
         }
-
     }
 
-    lista.sort(function(a,b){
-        return a.dias-b.dias;
-    });
+    lista.sort(function(a,b){ return a.dias-b.dias; });
 
     var html="";
 
-    html+="<div style='margin-top:12px;padding:10px;border:1px solid #999;background:#f5f5f5'>";
-    html+="<div style='font-size:16px;font-weight:bold;margin-bottom:8px'>";
-    html+="ITVs que caducan en los proximos 20 dias";
+    /* ===================== */
+    /* 🔴 LISTA RECHAZADAS   */
+    /* ===================== */
+    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:#f5f5f5;font-size:12px;'>";
+
+    html+="<div style='font-size:16px;font-weight:bold;color:#b00000;margin-bottom:5px;'>";
+    html+="ITVs RECHAZADAS";
+    html+="</div>";
+
+    if(rechazadas.length==0){
+        html+="<div style='color:green;font-weight:bold;'>No hay ITVs rechazadas</div>";
+    }else{
+        for(var i=0;i<rechazadas.length;i++){
+            var r = rechazadas[i];
+
+            html+="<div style='background:#ff8a8a;padding:5px;margin-bottom:3px;border-left:6px solid #b00000;'>";
+            html+="<b>"+r.matricula+"</b> &nbsp; "+r.vehiculo+" ("+r.flota+")";
+            html+=" &nbsp; <b style='color:#b00000;'>ITV RECHAZADA</b>";
+            html+="</div>";
+        }
+    }
+
+    html+="</div>";
+
+
+    /* ===================== */
+    /* 🟡 LISTA CADUCIDAD    */
+    /* ===================== */
+    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:#f5f5f5;font-size:12px;'>";
+
+    html+="<div style='font-size:16px;font-weight:bold;margin-bottom:5px;'>";
+    html+="ITVs QUE CADUCAN EN LOS PROXIMOS 20 DIAS";
     html+="</div>";
 
     if(lista.length==0){
-
-        html+="<span style='color:green;font-weight:bold'>";
-        html+="No hay vehiculos proximos a caducar.";
-        html+="</span>";
-
+        html+="<div style='color:green;font-weight:bold;'>No hay vehiculos proximos a caducar</div>";
     }else{
 
         for(var i=0;i<lista.length;i++){
-
             var c=lista[i];
 
-            var color="#fff27a";      // Amarillo (8-15 días)
-
-            if(c.dias<=5)
-                color="#ff8a8a";      // Rojo
-            else if(c.dias<=7)
-                color="#ffd07a";      // Naranja
+            var color="#fff27a";
+            if(c.dias<=5) color="#ff8a8a";
+            else if(c.dias<=7) color="#ffd07a";
 
             html+="<div style='background:"+color+";padding:5px;margin-bottom:4px;border-left:6px solid red;'>";
-
-            html+="<b>"+c.matricula+"</b>";
-
-            html+=" &nbsp; Vehiculo <b>"+c.vehiculo+"</b>";
-
-            html+=" &nbsp; ("+c.flota+")";
-
+            html+="<b>"+c.matricula+"</b> &nbsp; "+c.vehiculo+" ("+c.flota+")";
             html+=" &nbsp; Caduca el <b>"+c.fecha+"</b>";
-
             html+=" &nbsp; <span style='color:#b00000;font-weight:bold'>";
-
-            if(c.dias==0)
-                html+="HOY";
-            else if(c.dias==1)
-                html+="MAÑANA";
-            else
-                html+="EN "+c.dias+" DIAS";
-
+            if(c.dias==0) html+="HOY";
+            else if(c.dias==1) html+="MAÑANA";
+            else html+="EN "+c.dias+" DIAS";
             html+="</span>";
-
             html+="</div>";
-
         }
-
     }
 
     html+="</div>";
 
     return html;
-
 }
 
 </script>
