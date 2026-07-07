@@ -16,7 +16,7 @@
 body{font-family:Arial;margin:10px;background:#9db5cf no-repeat center center fixed;background-size:cover;}
 .header{background:#111;color:white;padding:10px;}
 .title{font-size:18px;font-weight:bold;}
-.nav button{padding:6px 10px;margin-right:5px;}
+.nav button{padding:0px 2px;margin-right:5px;}
 #countdown{height:22px;line-height:22px;font-weight:bold;color:#007acc;}
 table{border-collapse:collapse;width:100%;table-layout:fixed;background:#b4c7db;border:1px solid #000;}
 th, td{border:1px solid #000;}
@@ -565,17 +565,20 @@ function alertaCaducidades(){
 
 <body onload="start()">
 
-<h2>Datos obtenidos de ITVControl
+<h2 style="margin-bottom:6px;">
+    Datos obtenidos de ITVControl
     <img id="logoPrincipal" src="itvg-512.xk">
 </h2>
 
-<p id="estado">Conectando...</p>
+<div style="display:flex;align-items:center;gap:12px;margin-bottom:6px;">
+    <p id="estado" style="margin:0;">Conectando...</p>
 
-<input id="url" size="80" value="" />
-<button id="btnSync" onclick="sincronizar()">Sync ahora</button>
-<button onclick="cambiarClaveSync()">Cambiar clave Sync</button>
+    <input id="url" size="80" value="" />
+    <button id="btnSync" onclick="sincronizar()">Sync ahora</button>
+    <button onclick="cambiarClaveSync()">Cambiar clave Sync</button>
+</div>
 
-<hr>
+<hr style="margin-top:4px;">
 
 <div id="citas"></div>
 
