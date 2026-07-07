@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.1</title>
+<title>ITVControl ERP 4.2</title>
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -472,7 +472,8 @@ function alertaCaducidades(){
 
         var dias = Math.floor((fecha-hoy)/86400000);
 
-        if(dias>=0 && dias<=20){
+        // Mostrar también las ya caducadas
+        if(dias<=20){
             lista.push({
                 dias:dias,
                 matricula:v.matricula,
@@ -490,7 +491,7 @@ function alertaCaducidades(){
     /* ===================== */
     /* 🔴 LISTA RECHAZADAS   */
     /* ===================== */
-    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:#f5f5f5;font-size:12px;'>";
+    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:transparent;font-size:12px;'>";
 
     html+="<div style='font-size:16px;font-weight:bold;color:#b00000;margin-bottom:5px;'>";
     html+="ITVs RECHAZADAS";
@@ -515,10 +516,10 @@ function alertaCaducidades(){
     /* ===================== */
     /* 🟡 LISTA CADUCIDAD    */
     /* ===================== */
-    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:#f5f5f5;font-size:12px;'>";
+    html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:transparent;font-size:12px;'>";
 
     html+="<div style='font-size:16px;font-weight:bold;margin-bottom:5px;'>";
-    html+="ITVs QUE CADUCAN EN LOS PROXIMOS 20 DIAS";
+    html+="ITVs CADUCADAS Y QUE CADUCAN EN LOS PROXIMOS 20 DIAS";
     html+="</div>";
 
     if(lista.length==0){
@@ -536,9 +537,18 @@ function alertaCaducidades(){
             html+="<b>"+c.matricula+"</b> &nbsp; "+c.vehiculo+" ("+c.flota+")";
             html+=" &nbsp; Caduca el <b>"+c.fecha+"</b>";
             html+=" &nbsp; <span style='color:#b00000;font-weight:bold'>";
-            if(c.dias==0) html+="HOY";
-            else if(c.dias==1) html+="MAÑANA";
-            else html+="EN "+c.dias+" DIAS";
+            if(c.dias < 0){
+                html+="CADUCADA HACE "+(-c.dias)+" DIAS";
+            }
+            else if(c.dias==0){
+                html+="HOY";
+            }
+            else if(c.dias==1){
+                html+="MAÑANA";
+            }
+            else{
+                html+="EN "+c.dias+" DIAS";
+            }
             html+="</span>";
             html+="</div>";
         }
