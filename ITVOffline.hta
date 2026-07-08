@@ -1,8 +1,10 @@
-<html>
+<html lang="es">
 
 <head>
 
-<title>ITVControl ERP 4.2</title>
+<title>ITVControl ERP 4.3</title>
+
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
 <HTA:APPLICATION
     APPLICATIONNAME="ITVControl offline"
@@ -64,7 +66,7 @@ function getConfigPath(){
 
 function cambiarClaveSync(){
 
-    var clave = prompt("Nueva clave de sincronizacion:", "");
+    var clave = prompt("Nueva clave de sincronización:", "");
     if(clave == null) return;
 
     clave = clave.replace(/^\s+|\s+$/g, "");
@@ -198,7 +200,7 @@ function updateCountdown(){
 
     var m = Math.floor(syncLeft / 60);
     var s = syncLeft % 60;
-    el.innerHTML = "Proxima sync en: " + m + ":" + (s < 10 ? "0" : "") + s;
+    el.innerHTML = "Próxima sync en: " + m + ":" + (s < 10 ? "0" : "") + s;
 }
 
 /* ========================= */
@@ -213,7 +215,7 @@ function mostrarOffline(fechaSync){
         "<span style='color:#f20713;font-size:20px;font-weight:bold;'>OFFLINE</span>" +
         "<span style='display:inline-block;margin-left:10px;font-size:9px;color:gray;vertical-align:top;'>" +
             "Mostrando datos de CACHE<br>" +
-            "Ultima sincronizacion: " + fechaSync +
+            "Última sincronización: " + fechaSync +
         "</span>";
 }
 
@@ -519,11 +521,11 @@ function alertaCaducidades(){
     html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:transparent;font-size:12px;'>";
 
     html+="<div style='font-size:16px;font-weight:bold;margin-bottom:5px;'>";
-    html+="ITVs CADUCADAS Y QUE CADUCAN EN LOS PROXIMOS 20 DIAS";
+    html+="ITVs CADUCADAS Y QUE CADUCAN EN LOS PRÓXIMOS 20 DÍAS";
     html+="</div>";
 
     if(lista.length==0){
-        html+="<div style='color:green;font-weight:bold;'>No hay vehiculos proximos a caducar</div>";
+        html+="<div style='color:green;font-weight:bold;'>No hay vehículos próximos a caducar</div>";
     }else{
 
         for(var i=0;i<lista.length;i++){
