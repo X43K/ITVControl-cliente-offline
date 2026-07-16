@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.3</title>
+<title>ITVControl ERP 4.4</title>
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
@@ -434,6 +434,40 @@ function pintarCalendario(){
     el.innerHTML = html;
 }
 
+function tieneCitaITV(matricula){
+
+    if(!DATOS || !DATOS.citas) return false;
+
+    var hoy = new Date();
+    hoy.setHours(0,0,0,0);
+
+    for(var i=0;i<DATOS.citas.length;i++){
+
+        var c = DATOS.citas[i];
+
+        if(c.vehiculo != matricula) continue;
+
+        var f = normDate(c.fecha_cita);
+        if(!f) continue;
+
+        var p = f.split("-");
+        var fecha = new Date(
+            parseInt(p[0],10),
+            parseInt(p[1],10)-1,
+            parseInt(p[2],10)
+        );
+
+        fecha.setHours(0,0,0,0);
+
+        // Sólo cuentan citas de hoy o futuras
+        if(fecha >= hoy){
+            return true;
+        }
+    }
+
+    return false;
+}
+
 function alertaCaducidades(){
 
     if(!DATOS || !DATOS.vehiculos) return "";
@@ -552,6 +586,13 @@ function alertaCaducidades(){
                 html+="EN "+c.dias+" DIAS";
             }
             html+="</span>";
+			
+			if(!tieneCitaITV(c.matricula)){
+    html+="<br><span style='display:inline-block;background:#ffeb3b;color:#000;border:2px solid #000;padding:2px 8px;font-weight:bold;font-size:13px;'>";
+    html+="⚠ SIN CITA ITV ASIGNADA";
+    html+="</span>";
+}
+
             html+="</div>";
         }
     }
