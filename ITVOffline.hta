@@ -174,44 +174,101 @@ function crearActualizadorVBScript(rutaVbs, rutaTemporal, rutaDestino){
         var vbs = "";
 
         vbs += "Option Explicit" + "\r\n";
-        vbs += "Dim fso, shell, tempFile, targetFile, i" + "\r\n";
+        vbs += "Dim fso, shell, tempFile, targetFile, updaterFile" + "\r\n";
+        vbs += "Dim mshtaPath, comando, i, copiado" + "\r\n";
+
         vbs += "Set fso = CreateObject(" + q + "Scripting.FileSystemObject" + q + ")" + "\r\n";
         vbs += "Set shell = CreateObject(" + q + "WScript.Shell" + q + ")" + "\r\n";
 
-        vbs += "tempFile = " + q + rutaTemporal.replace(/"/g, q + q) + q + "\r\n";
-        vbs += "targetFile = " + q + rutaDestino.replace(/"/g, q + q) + q + "\r\n";
+        vbs += "tempFile = " + q + rutaTemporal + q + "\r\n";
+        vbs += "targetFile = " + q + rutaDestino + q + "\r\n";
+        vbs += "updaterFile = " + q + rutaVbs + q + "\r\n";
+
+        /*
+         * Esperamos a que el HTA antiguo se cierre.
+         */
+        vbs += "WScript.Sleep 3000" + "\r\n";
+
+        /*
+         * Intentamos copiar la nueva versión
+         * sobre la antigua.
+         */
+        vbs += "copiado = False" + "\r\n";
 
         vbs += "For i = 1 To 30" + "\r\n";
 
-        vbs += "    WScript.Sleep 500" + "\r\n";
-
         vbs += "    On Error Resume Next" + "\r\n";
+        vbs += "    Err.Clear" + "\r\n";
 
-        vbs += "    If fso.FileExists(tempFile) Then" + "\r\n";
-        vbs += "        fso.CopyFile tempFile, targetFile, True" + "\r\n";
+        vbs += "    fso.CopyFile tempFile, targetFile, True" + "\r\n";
 
-        vbs += "        If Err.Number = 0 Then" + "\r\n";
-        vbs += "            Exit For" + "\r\n";
-        vbs += "        End If" + "\r\n";
-        vbs += "        Err.Clear" + "\r\n";
+        vbs += "    If Err.Number = 0 Then" + "\r\n";
+        vbs += "        copiado = True" + "\r\n";
+        vbs += "        Exit For" + "\r\n";
         vbs += "    End If" + "\r\n";
 
+        vbs += "    Err.Clear" + "\r\n";
         vbs += "    On Error GoTo 0" + "\r\n";
+
+        vbs += "    WScript.Sleep 500" + "\r\n";
 
         vbs += "Next" + "\r\n";
 
-        vbs += "On Error Resume Next" + "\r\n";
-
-        vbs += "If fso.FileExists(tempFile) Then fso.DeleteFile tempFile, True" + "\r\n";
-
-        vbs += "shell.Run " + q + "mshta.exe " + q + " & Chr(34) & targetFile & Chr(34), 1, False" + "\r\n";
-
-        vbs += "WScript.Sleep 1000" + "\r\n";
-
-        vbs += "If fso.FileExists(" + q + rutaVbs.replace(/"/g, q + q) + q + ") Then" + "\r\n";
-        vbs += "    fso.DeleteFile " + q + rutaVbs.replace(/"/g, q + q) + q + ", True" + "\r\n";
+        /*
+         * Si no hemos podido reemplazar el archivo,
+         * salimos sin intentar arrancar nada.
+         */
+        vbs += "If copiado = False Then" + "\r\n";
+        vbs += "    On Error Resume Next" + "\r\n";
+        vbs += "    fso.DeleteFile tempFile, True" + "\r\n";
+        vbs += "    fso.DeleteFile updaterFile, True" + "\r\n";
+        vbs += "    WScript.Quit" + "\r\n";
         vbs += "End If" + "\r\n";
 
+        /*
+         * Eliminamos el HTA temporal descargado.
+         */
+        vbs += "On Error Resume Next" + "\r\n";
+        vbs += "fso.DeleteFile tempFile, True" + "\r\n";
+        vbs += "On Error GoTo 0" + "\r\n";
+
+        /*
+         * Esperamos un poco más para asegurarnos
+         * de que el HTA antiguo ya ha desaparecido.
+         */
+        vbs += "WScript.Sleep 2000" + "\r\n";
+
+        /*
+         * Ruta real de mshta.exe.
+         */
+        vbs += "mshtaPath = shell.ExpandEnvironmentStrings(" + q + "%SystemRoot%\\System32\\mshta.exe" + q + ")" + "\r\n";
+
+        /*
+         * Construimos explícitamente:
+         *
+         * "C:\Windows\System32\mshta.exe" "C:\...\ITVOffline.hta"
+         */
+        vbs += "comando = Chr(34) & mshtaPath & Chr(34) & " + q + " " + q + " & Chr(34) & targetFile & Chr(34)" + "\r\n";
+
+        /*
+         * Arrancamos la nueva versión.
+         */
+        vbs += "shell.Run comando, 1, False" + "\r\n";
+
+        /*
+         * Esperamos para darle tiempo a arrancar.
+         */
+        vbs += "WScript.Sleep 3000" + "\r\n";
+
+        /*
+         * Eliminamos este VBS temporal.
+         */
+        vbs += "On Error Resume Next" + "\r\n";
+        vbs += "fso.DeleteFile updaterFile, True" + "\r\n";
+
+        /*
+         * Guardamos el VBS.
+         */
         var f = fso.CreateTextFile(rutaVbs, true);
         f.Write(vbs);
         f.Close();
@@ -223,6 +280,7 @@ function crearActualizadorVBScript(rutaVbs, rutaTemporal, rutaDestino){
         return false;
     }
 }
+
 
 function iniciarActualizacion(rutaTemporal, versionNueva){
 
