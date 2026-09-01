@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.5</title>
+<title>ITVControl ERP 4.6</title>
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
@@ -489,28 +489,431 @@ function comprobarActualizacion(){
 
 function cambiarClaveSync(){
 
-    var clave = prompt("Nueva clave de sincronización:", "");
-    if(clave == null) return;
+    var webEjemplo =
+        "http://www.LAWEB-o-IPSERVIDOR.com/itv/sync_offline.php";
 
-    clave = clave.replace(/^\s+|\s+$/g, "");
+    var webActual = webEjemplo;
+    var claveActual = "";
 
-    if(clave == ""){
-        alert("No se ha introducido ninguna clave.");
-        return;
-    }
-
-    var url = "http://www.LAWEB-o-IPSERVIDOR.com/itv/sync_offline.php?key=" + escape(clave);
-    document.getElementById("url").value = url;
-
+    /*
+     * Leer configuración actual
+     */
     try{
-        var fso = new ActiveXObject("Scripting.FileSystemObject");
-        var f = fso.CreateTextFile(getConfigPath(), true);
-        f.Write(url);
-        f.Close();
+
+        var urlActual =
+            document.getElementById("url").value || "";
+
+        if(urlActual != ""){
+
+            var posKey = urlActual.indexOf("?key=");
+
+            if(posKey > -1){
+
+                webActual =
+                    urlActual.substring(0, posKey);
+
+                claveActual =
+                    urlActual.substring(posKey + 5);
+
+                try{
+                    claveActual =
+                        unescape(claveActual);
+                }catch(e){}
+
+            }else{
+
+                webActual = urlActual;
+
+            }
+        }
+
     }catch(e){}
 
-    sincronizar();
+
+    /*
+     * Capa completa
+     */
+    var fondo =
+        document.createElement("div");
+
+    fondo.id =
+        "ventanaCambiarSync";
+
+    fondo.style.position =
+        "absolute";
+
+    fondo.style.left =
+        "0px";
+
+    fondo.style.top =
+        "0px";
+
+    fondo.style.width =
+        "100%";
+
+    fondo.style.height =
+        "100%";
+
+    fondo.style.backgroundColor =
+        "#d0d0d0";
+
+    fondo.style.zIndex =
+        "99999";
+
+
+    /*
+     * Ventana.
+     *
+     * Ocupa prácticamente todo el ancho disponible.
+     */
+    var caja =
+        document.createElement("div");
+
+    caja.style.position =
+        "absolute";
+
+    caja.style.left =
+        "2%";
+
+    caja.style.top =
+        "10%";
+
+    caja.style.width =
+        "94%";
+
+    caja.style.backgroundColor =
+        "#eeeeee";
+
+    caja.style.border =
+        "2px solid #222222";
+
+    caja.style.padding =
+        "10px";
+
+    caja.style.fontFamily =
+        "Arial";
+
+
+    /*
+     * Contenido
+     */
+    var html = "";
+
+
+    html +=
+        "<div style='background:#222222;color:white;padding:8px;font-size:16px;font-weight:bold;'>";
+    html +=
+        "Cambiar configuración Sync";
+    html +=
+        "</div>";
+
+
+    /*
+     * WEB
+     */
+    html +=
+        "<div style='font-weight:bold;margin-top:15px;margin-bottom:5px;'>";
+    html +=
+        "WEB DE SINCRONIZACIÓN";
+    html +=
+        "</div>";
+
+
+    html +=
+        "<div style='font-size:11px;color:#555555;margin-bottom:3px;'>";
+    html +=
+        "Ejemplo:";
+    html +=
+        "</div>";
+
+
+    html +=
+        "<div style='font-size:12px;color:#007acc;margin-bottom:8px;'>";
+    html +=
+        webEjemplo;
+    html +=
+        "</div>";
+
+
+html +=
+    "<input id='nuevaWebSync' type='text' " +
+    "style='width:90%;height:35px;padding:6px;font-size:14px;' " +
+    "value='" +
+    escaparHTML(webActual) +
+    "'>";
+
+
+
+    /*
+     * CLAVE
+     */
+    html +=
+        "<div style='font-weight:bold;margin-top:15px;margin-bottom:5px;'>";
+    html +=
+        "CLAVE DE SINCRONIZACIÓN";
+    html +=
+        "</div>";
+
+
+html +=
+    "<input id='nuevaClaveSync' type='text' " +
+    "style='width:90%;height:35px;padding:6px;font-size:14px;' " +
+    "value='" +
+    escaparHTML(claveActual) +
+    "'>";
+
+
+
+    /*
+     * BOTONES
+     */
+    html +=
+        "<div style='margin-top:20px;text-align:center;'>";
+
+
+    html +=
+        "<button id='cancelarCambioSync' " +
+        "style='padding:7px 20px;margin-right:15px;'>";
+    html +=
+        "Cancelar";
+    html +=
+        "</button>";
+
+
+    html +=
+        "<button id='guardarCambioSync' " +
+        "style='padding:7px 20px;font-weight:bold;'>";
+    html +=
+        "Guardar y sincronizar";
+    html +=
+        "</button>";
+
+
+    html +=
+        "</div>";
+
+
+    caja.innerHTML =
+        html;
+
+
+    fondo.appendChild(
+        caja
+    );
+
+    document.body.appendChild(
+        fondo
+    );
+
+
+    /*
+     * CANCELAR
+     */
+    document.getElementById(
+        "cancelarCambioSync"
+    ).onclick =
+        function(){
+
+            try{
+
+                document.body.removeChild(
+                    fondo
+                );
+
+            }catch(e){}
+
+        };
+
+
+    /*
+     * GUARDAR
+     */
+    document.getElementById(
+        "guardarCambioSync"
+    ).onclick =
+        function(){
+
+            var web =
+                document.getElementById(
+                    "nuevaWebSync"
+                ).value;
+
+            var clave =
+                document.getElementById(
+                    "nuevaClaveSync"
+                ).value;
+
+
+            web =
+                web.replace(
+                    /^\s+|\s+$/g,
+                    ""
+                );
+
+            clave =
+                clave.replace(
+                    /^\s+|\s+$/g,
+                    ""
+                );
+
+
+            /*
+             * Comprobar web
+             */
+            if(web == ""){
+
+                alert(
+                    "No se ha introducido ninguna web."
+                );
+
+                return;
+            }
+
+
+            /*
+             * Comprobar clave
+             */
+            if(clave == ""){
+
+                alert(
+                    "No se ha introducido ninguna clave."
+                );
+
+                return;
+            }
+
+
+            /*
+             * Eliminar ?key= si el usuario lo ha escrito
+             */
+            var posKeyWeb =
+                web.indexOf("?key=");
+
+            if(posKeyWeb > -1){
+
+                web =
+                    web.substring(
+                        0,
+                        posKeyWeb
+                    );
+
+            }
+
+
+            /*
+             * Quitar / final
+             */
+            while(
+                web.charAt(
+                    web.length - 1
+                ) == "/"
+            ){
+
+                web =
+                    web.substring(
+                        0,
+                        web.length - 1
+                    );
+
+            }
+
+
+            /*
+             * Crear URL definitiva
+             */
+            var url =
+                web +
+                "?key=" +
+                escape(clave);
+
+
+            /*
+             * Guardar en el campo oculto
+             */
+            document.getElementById(
+                "url"
+            ).value =
+                url;
+
+
+            /*
+             * Guardar config.xk
+             */
+            try{
+
+                var fso =
+                    new ActiveXObject(
+                        "Scripting.FileSystemObject"
+                    );
+
+                var f =
+                    fso.CreateTextFile(
+                        getConfigPath(),
+                        true
+                    );
+
+                f.Write(
+                    url
+                );
+
+                f.Close();
+
+            }catch(e){
+
+                alert(
+                    "No se ha podido guardar la configuración."
+                );
+
+                return;
+
+            }
+
+
+            /*
+             * Cerrar ventana
+             */
+            try{
+
+                document.body.removeChild(
+                    fondo
+                );
+
+            }catch(e){}
+
+
+            /*
+             * Reiniciar contador
+             */
+            syncLeft =
+                SYNC_INTERVAL;
+
+
+            /*
+             * Sincronizar
+             */
+            sincronizar();
+
+        };
 }
+
+
+/*
+ * ESCAPAR TEXTO PARA HTML
+ */
+function escaparHTML(txt){
+
+    if(txt == null){
+        return "";
+    }
+
+    return String(txt)
+        .replace(/&/g, "&amp;")
+        .replace(/"/g, "&quot;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+
+}
+
 
 /* ========================= */
 /* CACHÉ                     */
