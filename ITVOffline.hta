@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.4</title>
+<title>ITVControl ERP 4.5</title>
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
@@ -47,6 +47,16 @@ var SYNC_INTERVAL = 300;
 var syncLeft = SYNC_INTERVAL;
 
 /* ========================= */
+/* ACTUALIZACIÓN AUTOMÁTICA  */
+/* ========================= */
+
+var URL_ACTUALIZACION =
+    "https://raw.githubusercontent.com/X43K/ITVControl-cliente-offline/refs/heads/main/ITVOffline.hta";
+
+var actualizacionEnCurso = false;
+var ultimaComprobacionActualizacion = 0;
+
+/* ========================= */
 /* RUTAS DE ARCHIVOS         */
 /* ========================= */
 
@@ -58,6 +68,361 @@ function getCachePath(){
 function getConfigPath(){
     var fso = new ActiveXObject("Scripting.FileSystemObject");
     return fso.GetParentFolderName(location.pathname) + "\\config.xk";
+}
+
+/* ========================= */
+/* ACTUALIZADOR AUTOMÁTICO   */
+/* ========================= */
+
+function getRutaHTAActual(){
+    try{
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        return fso.GetAbsolutePathName(location.pathname);
+    }catch(e){
+        return "";
+    }
+}
+
+function getVersionLocal(){
+
+    try{
+        var titulo = document.title || "";
+        var m = titulo.match(/ITVControl\s+ERP\s+([0-9]+(?:\.[0-9]+)*)/i);
+
+        if(m && m[1]){
+            return m[1];
+        }
+
+    }catch(e){}
+
+    return "0";
+}
+
+function compararVersiones(v1, v2){
+
+    try{
+
+        var a = String(v1).split(".");
+        var b = String(v2).split(".");
+
+        var max = Math.max(a.length, b.length);
+
+        for(var i = 0; i < max; i++){
+
+            var n1 = parseInt(a[i] || "0", 10);
+            var n2 = parseInt(b[i] || "0", 10);
+
+            if(isNaN(n1)) n1 = 0;
+            if(isNaN(n2)) n2 = 0;
+
+            if(n1 > n2) return 1;
+            if(n1 < n2) return -1;
+        }
+
+    }catch(e){}
+
+    return 0;
+}
+
+function extraerVersionRemota(txt){
+
+    try{
+
+        var m = txt.match(/<title[^>]*>\s*ITVControl\s+ERP\s+([0-9]+(?:\.[0-9]+)*)\s*<\/title>/i);
+
+        if(m && m[1]){
+            return m[1];
+        }
+
+    }catch(e){}
+
+    return "";
+}
+
+function escribirArchivoBinario(ruta, datos){
+
+    try{
+
+        var stream = new ActiveXObject("ADODB.Stream");
+
+        stream.Type = 1;
+        stream.Open();
+        stream.Write(datos);
+        stream.SaveToFile(ruta, 2);
+        stream.Close();
+
+        return true;
+
+    }catch(e){
+
+        try{
+            if(stream) stream.Close();
+        }catch(e2){}
+
+        return false;
+    }
+}
+
+function crearActualizadorVBScript(rutaVbs, rutaTemporal, rutaDestino){
+
+    try{
+
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+
+        var q = String.fromCharCode(34);
+
+        var vbs = "";
+
+        vbs += "Option Explicit" + "\r\n";
+        vbs += "Dim fso, shell, tempFile, targetFile, i" + "\r\n";
+        vbs += "Set fso = CreateObject(" + q + "Scripting.FileSystemObject" + q + ")" + "\r\n";
+        vbs += "Set shell = CreateObject(" + q + "WScript.Shell" + q + ")" + "\r\n";
+
+        vbs += "tempFile = " + q + rutaTemporal.replace(/"/g, q + q) + q + "\r\n";
+        vbs += "targetFile = " + q + rutaDestino.replace(/"/g, q + q) + q + "\r\n";
+
+        vbs += "For i = 1 To 30" + "\r\n";
+
+        vbs += "    WScript.Sleep 500" + "\r\n";
+
+        vbs += "    On Error Resume Next" + "\r\n";
+
+        vbs += "    If fso.FileExists(tempFile) Then" + "\r\n";
+        vbs += "        fso.CopyFile tempFile, targetFile, True" + "\r\n";
+
+        vbs += "        If Err.Number = 0 Then" + "\r\n";
+        vbs += "            Exit For" + "\r\n";
+        vbs += "        End If" + "\r\n";
+        vbs += "        Err.Clear" + "\r\n";
+        vbs += "    End If" + "\r\n";
+
+        vbs += "    On Error GoTo 0" + "\r\n";
+
+        vbs += "Next" + "\r\n";
+
+        vbs += "On Error Resume Next" + "\r\n";
+
+        vbs += "If fso.FileExists(tempFile) Then fso.DeleteFile tempFile, True" + "\r\n";
+
+        vbs += "shell.Run " + q + "mshta.exe " + q + " & Chr(34) & targetFile & Chr(34), 1, False" + "\r\n";
+
+        vbs += "WScript.Sleep 1000" + "\r\n";
+
+        vbs += "If fso.FileExists(" + q + rutaVbs.replace(/"/g, q + q) + q + ") Then" + "\r\n";
+        vbs += "    fso.DeleteFile " + q + rutaVbs.replace(/"/g, q + q) + q + ", True" + "\r\n";
+        vbs += "End If" + "\r\n";
+
+        var f = fso.CreateTextFile(rutaVbs, true);
+        f.Write(vbs);
+        f.Close();
+
+        return true;
+
+    }catch(e){
+
+        return false;
+    }
+}
+
+function iniciarActualizacion(rutaTemporal, versionNueva){
+
+    try{
+
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+
+        var rutaActual = getRutaHTAActual();
+
+        if(!rutaActual){
+            return false;
+        }
+
+        var carpeta = fso.GetParentFolderName(rutaActual);
+
+        var nombreBase = fso.GetBaseName(rutaActual);
+
+        var rutaVbs =
+            carpeta +
+            "\\" +
+            nombreBase +
+            "_actualizador_" +
+            new Date().getTime() +
+            ".vbs";
+
+        if(!crearActualizadorVBScript(
+            rutaVbs,
+            rutaTemporal,
+            rutaActual
+        )){
+            return false;
+        }
+
+        actualizacionEnCurso = true;
+
+        var shell = new ActiveXObject("WScript.Shell");
+
+        shell.Run(
+            "wscript.exe " + String.fromCharCode(34) + rutaVbs + String.fromCharCode(34),
+            0,
+            false
+        );
+
+        alert(
+            "Se ha encontrado una nueva versión de ITVControl.\n\n" +
+            "Versión actual: " + getVersionLocal() + "\n" +
+            "Nueva versión: " + versionNueva + "\n\n" +
+            "El programa se va a actualizar y reiniciar automáticamente."
+        );
+
+        window.close();
+
+        return true;
+
+    }catch(e){
+
+        actualizacionEnCurso = false;
+
+        return false;
+    }
+}
+
+function comprobarActualizacion(){
+
+    if(actualizacionEnCurso){
+        return;
+    }
+
+    try{
+
+        var ahora = new Date().getTime();
+
+        /*
+         * Evitamos que dos sincronizaciones simultáneas
+         * lancen dos comprobaciones de GitHub.
+         */
+        if(ahora - ultimaComprobacionActualizacion < 10000){
+            return;
+        }
+
+        ultimaComprobacionActualizacion = ahora;
+
+        var versionLocal = getVersionLocal();
+
+        var xhr = new ActiveXObject("MSXML2.XMLHTTP.6.0");
+
+        var url =
+            URL_ACTUALIZACION +
+            (URL_ACTUALIZACION.indexOf("?") > -1 ? "&" : "?") +
+            "t=" +
+            new Date().getTime();
+
+        xhr.open("GET", url, true);
+
+        xhr.onreadystatechange = function(){
+
+            if(xhr.readyState != 4){
+                return;
+            }
+
+            try{
+
+                if(xhr.status != 200 || !xhr.responseText){
+                    return;
+                }
+
+                var txt = xhr.responseText;
+
+                var versionRemota = extraerVersionRemota(txt);
+
+                if(!versionRemota){
+                    return;
+                }
+
+                /*
+                 * Si GitHub tiene la misma versión o una inferior,
+                 * no hacemos absolutamente nada.
+                 */
+                if(compararVersiones(versionRemota, versionLocal) <= 0){
+                    return;
+                }
+
+                /*
+                 * Ya tenemos una versión superior.
+                 * La descargamos a un archivo temporal.
+                 */
+
+                var fso = new ActiveXObject("Scripting.FileSystemObject");
+
+                var rutaActual = getRutaHTAActual();
+
+                if(!rutaActual){
+                    return;
+                }
+
+                var carpeta = fso.GetParentFolderName(rutaActual);
+
+                var rutaTemporal =
+                    carpeta +
+                    "\\ITVOffline_update_" +
+                    new Date().getTime() +
+                    ".hta";
+
+                if(!escribirArchivoBinario(
+                    rutaTemporal,
+                    xhr.responseBody
+                )){
+                    return;
+                }
+
+                /*
+                 * Comprobamos que el archivo descargado
+                 * parece realmente un HTA válido y que
+                 * contiene la versión esperada.
+                 */
+
+                var check = fso.OpenTextFile(rutaTemporal, 1, false);
+                var contenidoCheck = check.ReadAll();
+                check.Close();
+
+                var versionDescargada =
+                    extraerVersionRemota(contenidoCheck);
+
+                if(
+                    !versionDescargada ||
+                    compararVersiones(versionDescargada, versionLocal) <= 0
+                ){
+
+                    try{
+                        fso.DeleteFile(rutaTemporal, true);
+                    }catch(e1){}
+
+                    return;
+                }
+
+                iniciarActualizacion(
+                    rutaTemporal,
+                    versionDescargada
+                );
+
+            }catch(e){
+
+                /*
+                 * Si falla la comprobación de actualización,
+                 * no afecta al funcionamiento normal.
+                 */
+
+            }
+        };
+
+        xhr.send();
+
+    }catch(e){
+
+        /*
+         * Sin Internet, GitHub caído, etc.
+         * El programa continúa funcionando normalmente.
+         */
+
+    }
 }
 
 /* ========================= */
@@ -183,9 +548,18 @@ function start(){
     }
 
     sincronizar();
+
+    /*
+     * Comprobación de actualización al arrancar.
+     * Se ejecuta unos segundos después para no interferir
+     * con la carga inicial ni con la sincronización.
+     */
+    setTimeout(comprobarActualizacion, 5000);
+
     setInterval(sincronizar, SYNC_INTERVAL * 1000);
     setInterval(updateCountdown, 1000);
 }
+
 
 /* ========================= */
 /* CUENTA ATRÁS SYNC         */
@@ -261,6 +635,8 @@ function sincronizar(){
 
                 fondoOnline();
                 pintarCalendario();
+				
+                comprobarActualizacion();
 
             }catch(e){
                 if(cargarCache()){ buildIndex(); pintarCalendario(); }
