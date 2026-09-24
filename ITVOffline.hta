@@ -2,7 +2,7 @@
 
 <head>
 
-<title>ITVControl ERP 4.6</title>
+<title>ITVControl ERP 5.0</title>
 
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
 
@@ -45,6 +45,75 @@ var VEH_INDEX = {};
 
 var SYNC_INTERVAL = 300;
 var syncLeft = SYNC_INTERVAL;
+
+/* ========================= */
+/* AJUSTES DE AVISOS         */
+/* ========================= */
+
+var AVISO_DIAS = 20;
+var AVISO_ROJO = 5;
+var AVISO_NARANJA = 7;
+
+function cargarAjustesAvisos(){
+
+    try{
+
+        var fso = new ActiveXObject("Scripting.FileSystemObject");
+        var path = getConfigPath();
+
+        if(!fso.FileExists(path)){
+            return;
+        }
+
+        var f = fso.OpenTextFile(path, 1);
+        var txt = f.ReadAll();
+        f.Close();
+
+        /*
+         * Los ajustes se guardan después de:
+         *
+         * AVISO_DIAS=20
+         * AVISO_ROJO=5
+         * AVISO_NARANJA=7
+         */
+
+        var m;
+
+        m = txt.match(/AVISO_DIAS=(\d+)/);
+        if(m){
+            AVISO_DIAS = parseInt(m[1], 10);
+        }
+
+        m = txt.match(/AVISO_ROJO=(\d+)/);
+        if(m){
+            AVISO_ROJO = parseInt(m[1], 10);
+        }
+
+        m = txt.match(/AVISO_NARANJA=(\d+)/);
+        if(m){
+            AVISO_NARANJA = parseInt(m[1], 10);
+        }
+
+        if(isNaN(AVISO_DIAS) || AVISO_DIAS < 0){
+            AVISO_DIAS = 20;
+        }
+
+        if(isNaN(AVISO_ROJO) || AVISO_ROJO < 0){
+            AVISO_ROJO = 5;
+        }
+
+        if(isNaN(AVISO_NARANJA) || AVISO_NARANJA < 0){
+            AVISO_NARANJA = 7;
+        }
+
+    }catch(e){
+
+        AVISO_DIAS = 20;
+        AVISO_ROJO = 5;
+        AVISO_NARANJA = 7;
+    }
+}
+
 
 /* ========================= */
 /* ACTUALIZACIÓN AUTOMÁTICA  */
@@ -500,34 +569,51 @@ function cambiarClaveSync(){
      */
     try{
 
-        var urlActual =
-            document.getElementById("url").value || "";
+    var urlActual =
+        document.getElementById("url").value || "";
 
-        if(urlActual != ""){
+    /*
+     * Por seguridad, si por alguna razón el campo contiene
+     * varias líneas, solamente utilizamos la primera.
+     */
+    urlActual =
+        urlActual.split(/\r?\n/)[0];
 
-            var posKey = urlActual.indexOf("?key=");
+    urlActual =
+        urlActual.replace(/^\s+|\s+$/g, "");
 
-            if(posKey > -1){
 
-                webActual =
-                    urlActual.substring(0, posKey);
+    if(urlActual != ""){
+
+        var posKey =
+            urlActual.indexOf("?key=");
+
+        if(posKey > -1){
+
+            webActual =
+                urlActual.substring(0, posKey);
+
+            claveActual =
+                urlActual.substring(
+                    posKey + 5
+                );
+
+            try{
 
                 claveActual =
-                    urlActual.substring(posKey + 5);
+                    unescape(claveActual);
 
-                try{
-                    claveActual =
-                        unescape(claveActual);
-                }catch(e){}
+            }catch(e){}
 
-            }else{
+        }else{
 
-                webActual = urlActual;
-
-            }
+            webActual =
+                urlActual;
         }
+    }
 
-    }catch(e){}
+}catch(e){}
+
 
 
     /*
@@ -827,47 +913,62 @@ html +=
                 escape(clave);
 
 
-            /*
-             * Guardar en el campo oculto
-             */
-            document.getElementById(
-                "url"
-            ).value =
-                url;
+/*
+ * Guardar en el campo oculto
+ */
+document.getElementById(
+    "url"
+).value =
+    url;
 
 
-            /*
-             * Guardar config.xk
-             */
-            try{
+/*
+ * Guardar config.xk
+ *
+ * Primera línea = URL de sincronización
+ * Líneas siguientes = ajustes de avisos
+ */
+try{
 
-                var fso =
-                    new ActiveXObject(
-                        "Scripting.FileSystemObject"
-                    );
+    var fso =
+        new ActiveXObject(
+            "Scripting.FileSystemObject"
+        );
 
-                var f =
-                    fso.CreateTextFile(
-                        getConfigPath(),
-                        true
-                    );
+    var contenidoConfig =
+        url +
+        "\r\n" +
+        "AVISO_DIAS=" +
+        AVISO_DIAS +
+        "\r\n" +
+        "AVISO_ROJO=" +
+        AVISO_ROJO +
+        "\r\n" +
+        "AVISO_NARANJA=" +
+        AVISO_NARANJA;
 
-                f.Write(
-                    url
-                );
 
-                f.Close();
+    var f =
+        fso.CreateTextFile(
+            getConfigPath(),
+            true
+        );
 
-            }catch(e){
+    f.Write(
+        contenidoConfig
+    );
 
-                alert(
-                    "No se ha podido guardar la configuración."
-                );
+    f.Close();
 
-                return;
+}catch(e){
 
-            }
+    alert(
+        "No se ha podido guardar la configuración."
+    );
 
+    return;
+
+}
 
             /*
              * Cerrar ventana
@@ -893,6 +994,393 @@ html +=
              */
             sincronizar();
 
+        };
+}
+
+function ajustesAvisos(){
+
+    /*
+     * Cargar valores actuales
+     */
+    cargarAjustesAvisos();
+
+    var fondo =
+        document.createElement("div");
+
+    fondo.id =
+        "ventanaAjustesAvisos";
+
+    fondo.style.position =
+        "absolute";
+
+    fondo.style.left =
+        "0px";
+
+    fondo.style.top =
+        "0px";
+
+    fondo.style.width =
+        "100%";
+
+    fondo.style.height =
+        "100%";
+
+    fondo.style.backgroundColor =
+        "#d0d0d0";
+
+    fondo.style.zIndex =
+        "99999";
+
+
+    var caja =
+        document.createElement("div");
+
+    caja.style.position =
+        "absolute";
+
+    caja.style.left =
+        "2%";
+
+    caja.style.top =
+        "10%";
+
+    caja.style.width =
+        "94%";
+
+    caja.style.backgroundColor =
+        "#eeeeee";
+
+    caja.style.border =
+        "2px solid #222222";
+
+    caja.style.padding =
+        "10px";
+
+    caja.style.fontFamily =
+        "Arial";
+
+
+    var html = "";
+
+
+    html +=
+        "<div style='background:#222;color:white;padding:8px;font-size:16px;font-weight:bold;'>";
+    html +=
+        "Ajustes de avisos ITV";
+    html +=
+        "</div>";
+
+
+    /*
+     * AVISO GENERAL
+     */
+    html +=
+        "<div style='font-weight:bold;margin-top:15px;margin-bottom:5px;'>";
+    html +=
+        "DÍAS PARA MOSTRAR AVISOS";
+    html +=
+        "</div>";
+
+    html +=
+        "<div style='font-size:12px;color:#555;margin-bottom:5px;'>";
+    html +=
+        "Se mostrarán las ITVs caducadas y las que caduquen dentro de este número de días.";
+    html +=
+        "</div>";
+
+    html +=
+        "<input id='avisoDias' type='number' min='0' " +
+        "style='width:100px;height:30px;padding:5px;font-size:14px;' " +
+        "value='" + AVISO_DIAS + "'>";
+
+
+    /*
+     * ROJO
+     */
+    html +=
+        "<div style='font-weight:bold;margin-top:15px;margin-bottom:5px;'>";
+    html +=
+        "AVISO ROJO";
+    html +=
+        "</div>";
+
+    html +=
+        "<div style='font-size:12px;color:#555;margin-bottom:5px;'>";
+    html +=
+        "Hasta este número de días se utilizará el color rojo.";
+    html +=
+        "</div>";
+
+    html +=
+        "<div style='display:flex;align-items:center;gap:10px;'>";
+
+    html +=
+        "<input id='avisoRojo' type='number' min='0' " +
+        "style='width:100px;height:30px;padding:5px;font-size:14px;' " +
+        "value='" + AVISO_ROJO + "'>";
+
+    html +=
+        "<div style='width:35px;height:25px;background:#ff8a8a;border:1px solid #000;'></div>";
+
+    html +=
+        "</div>";
+
+
+    /*
+     * NARANJA
+     */
+    html +=
+        "<div style='font-weight:bold;margin-top:15px;margin-bottom:5px;'>";
+    html +=
+        "AVISO NARANJA";
+    html +=
+        "</div>";
+
+    html +=
+        "<div style='font-size:12px;color:#555;margin-bottom:5px;'>";
+    html +=
+        "Hasta este número de días se utilizará el color naranja.";
+    html +=
+        "</div>";
+
+    html +=
+        "<div style='display:flex;align-items:center;gap:10px;'>";
+
+    html +=
+        "<input id='avisoNaranja' type='number' min='0' " +
+        "style='width:100px;height:30px;padding:5px;font-size:14px;' " +
+        "value='" + AVISO_NARANJA + "'>";
+
+    html +=
+        "<div style='width:35px;height:25px;background:#ffd07a;border:1px solid #000;'></div>";
+
+    html +=
+        "</div>";
+
+
+    /*
+     * BOTONES
+     */
+    html +=
+        "<div style='margin-top:20px;text-align:center;'>";
+
+    html +=
+        "<button id='cancelarAjustesAvisos' " +
+        "style='padding:7px 20px;margin-right:15px;'>";
+    html +=
+        "Cancelar";
+    html +=
+        "</button>";
+
+    html +=
+        "<button id='guardarAjustesAvisos' " +
+        "style='padding:7px 20px;font-weight:bold;'>";
+    html +=
+        "Guardar";
+    html +=
+        "</button>";
+
+    html +=
+        "</div>";
+
+
+    caja.innerHTML =
+        html;
+
+    fondo.appendChild(
+        caja
+    );
+
+    document.body.appendChild(
+        fondo
+    );
+
+
+    /*
+     * CANCELAR
+     */
+    document.getElementById(
+        "cancelarAjustesAvisos"
+    ).onclick =
+        function(){
+
+            try{
+
+                document.body.removeChild(
+                    fondo
+                );
+
+            }catch(e){}
+
+        };
+
+
+    /*
+     * GUARDAR
+     */
+    document.getElementById(
+        "guardarAjustesAvisos"
+    ).onclick =
+        function(){
+
+            var dias =
+                parseInt(
+                    document.getElementById("avisoDias").value,
+                    10
+                );
+
+            var rojo =
+                parseInt(
+                    document.getElementById("avisoRojo").value,
+                    10
+                );
+
+            var naranja =
+                parseInt(
+                    document.getElementById("avisoNaranja").value,
+                    10
+                );
+
+
+            /*
+             * Validaciones
+             */
+            if(isNaN(dias) || dias < 0){
+
+                alert(
+                    "Los días para mostrar avisos deben ser 0 o superiores."
+                );
+
+                return;
+            }
+
+            if(isNaN(rojo) || rojo < 0){
+
+                alert(
+                    "Los días del aviso rojo deben ser 0 o superiores."
+                );
+
+                return;
+            }
+
+            if(isNaN(naranja) || naranja < 0){
+
+                alert(
+                    "Los días del aviso naranja deben ser 0 o superiores."
+                );
+
+                return;
+            }
+
+
+            /*
+             * El rojo debe ser igual o inferior
+             * al naranja.
+             */
+            if(rojo > naranja){
+
+                alert(
+                    "El aviso rojo no puede tener más días que el aviso naranja."
+                );
+
+                return;
+            }
+
+
+            /*
+             * Guardar valores en memoria
+             */
+            AVISO_DIAS =
+                dias;
+
+            AVISO_ROJO =
+                rojo;
+
+            AVISO_NARANJA =
+                naranja;
+
+
+            /*
+             * Guardar configuración
+             */
+            try{
+
+                var fso =
+                    new ActiveXObject(
+                        "Scripting.FileSystemObject"
+                    );
+
+                var path =
+                    getConfigPath();
+
+                var contenido =
+                    "";
+
+                /*
+                 * Mantener la configuración Sync existente.
+                 */
+                var urlSync =
+                    document.getElementById("url").value || "";
+
+                contenido +=
+                    urlSync;
+
+                contenido +=
+                    "\r\n";
+
+                contenido +=
+                    "AVISO_DIAS=" +
+                    AVISO_DIAS +
+                    "\r\n";
+
+                contenido +=
+                    "AVISO_ROJO=" +
+                    AVISO_ROJO +
+                    "\r\n";
+
+                contenido +=
+                    "AVISO_NARANJA=" +
+                    AVISO_NARANJA;
+
+
+                var f =
+                    fso.CreateTextFile(
+                        path,
+                        true
+                    );
+
+                f.Write(
+                    contenido
+                );
+
+                f.Close();
+
+            }catch(e){
+
+                alert(
+                    "No se han podido guardar los ajustes de avisos."
+                );
+
+                return;
+            }
+
+
+            /*
+             * Cerrar ventana
+             */
+            try{
+
+                document.body.removeChild(
+                    fondo
+                );
+
+            }catch(e){}
+
+
+            /*
+             * Redibujar inmediatamente
+             */
+            pintarCalendario();
         };
 }
 
@@ -990,37 +1478,82 @@ function fondoOffline(){
 /* ========================= */
 
 function start(){
+
     try{
-        var fso = new ActiveXObject("Scripting.FileSystemObject");
+
+        var fso =
+            new ActiveXObject(
+                "Scripting.FileSystemObject"
+            );
+
         if(fso.FileExists(getConfigPath())){
-            var f = fso.OpenTextFile(getConfigPath(), 1);
-            document.getElementById("url").value = f.ReadAll();
+
+            var f =
+                fso.OpenTextFile(
+                    getConfigPath(),
+                    1
+                );
+
+            var configTxt =
+                f.ReadAll();
+
             f.Close();
+
+            /*
+             * La primera línea es exclusivamente
+             * la URL de sincronización.
+             */
+            var lineas =
+                configTxt.split(/\r?\n/);
+
+            if(lineas.length > 0){
+
+                document.getElementById("url").value =
+                    lineas[0].replace(/^\s+|\s+$/g, "");
+            }
         }
+
     }catch(e){}
+
+
+    /*
+     * Cargar ajustes de avisos
+     */
+    cargarAjustesAvisos();
+
 
     window.resizeTo(1050, 750);
     window.moveTo(-2, 4);
 
+
     if(cargarCache()){
+
         buildIndex();
         pintarCalendario();
-        document.getElementById("estado").innerHTML = "CACHE OFFLINE";
+
+        document.getElementById("estado").innerHTML =
+            "CACHE OFFLINE";
     }
+
 
     sincronizar();
 
-    /*
-     * Comprobación de actualización al arrancar.
-     * Se ejecuta unos segundos después para no interferir
-     * con la carga inicial ni con la sincronización.
-     */
-    setTimeout(comprobarActualizacion, 5000);
 
-    setInterval(sincronizar, SYNC_INTERVAL * 1000);
-    setInterval(updateCountdown, 1000);
+    setTimeout(
+        comprobarActualizacion,
+        5000
+    );
+
+    setInterval(
+        sincronizar,
+        SYNC_INTERVAL * 1000
+    );
+
+    setInterval(
+        updateCountdown,
+        1000
+    );
 }
-
 
 /* ========================= */
 /* CUENTA ATRÁS SYNC         */
@@ -1062,8 +1595,24 @@ function getFechaSync(){
 function sincronizar(){
     try{
         var xhr = new ActiveXObject("MSXML2.XMLHTTP.6.0");
-        var url = document.getElementById("url").value;
-        url += (url.indexOf("?") > -1 ? "&" : "?") + "t=" + new Date().getTime();
+var url =
+    document.getElementById("url").value || "";
+
+/*
+ * Seguridad: la URL de sincronización siempre es
+ * solamente la primera línea de config.xk.
+ */
+url =
+    url.split(/\r?\n/)[0];
+
+url =
+    url.replace(/^\s+|\s+$/g, "");
+
+url +=
+    (url.indexOf("?") > -1 ? "&" : "?") +
+    "t=" +
+    new Date().getTime();
+
 
         xhr.open("GET", url, true);
 
@@ -1346,7 +1895,7 @@ function alertaCaducidades(){
         var dias = Math.floor((fecha-hoy)/86400000);
 
         // Mostrar también las ya caducadas
-        if(dias<=20){
+        if(dias <= AVISO_DIAS){
             lista.push({
                 dias:dias,
                 matricula:v.matricula,
@@ -1392,8 +1941,9 @@ function alertaCaducidades(){
     html+="<div style='margin-top:10px;padding:6px;border:1px solid #999;background:transparent;font-size:12px;'>";
 
     html+="<div style='font-size:16px;font-weight:bold;margin-bottom:5px;'>";
-    html+="ITVs CADUCADAS Y QUE CADUCAN EN LOS PRÓXIMOS 20 DÍAS";
+    html+="ITVs CADUCADAS Y QUE CADUCAN EN LOS PRÓXIMOS " + AVISO_DIAS + " DÍAS";
     html+="</div>";
+
 
     if(lista.length==0){
         html+="<div style='color:green;font-weight:bold;'>No hay vehículos próximos a caducar</div>";
@@ -1402,9 +1952,15 @@ function alertaCaducidades(){
         for(var i=0;i<lista.length;i++){
             var c=lista[i];
 
-            var color="#fff27a";
-            if(c.dias<=5) color="#ff8a8a";
-            else if(c.dias<=7) color="#ffd07a";
+            var color = "#fff27a";
+
+            if(c.dias <= AVISO_ROJO){
+                color = "#ff8a8a";
+            }
+            else if(c.dias <= AVISO_NARANJA){
+                color = "#ffd07a";
+            }
+
 
             html+="<div style='background:"+color+";padding:5px;margin-bottom:4px;border-left:6px solid red;'>";
             html+="<b>"+c.matricula+"</b> &nbsp; "+c.vehiculo+" ("+c.flota+")";
@@ -1456,6 +2012,8 @@ function alertaCaducidades(){
     <input id="url" size="80" value="" />
     <button id="btnSync" onclick="sincronizar()">Sync ahora</button>
     <button onclick="cambiarClaveSync()">Cambiar clave Sync</button>
+	<button onclick="ajustesAvisos()">Ajustes avisos</button>
+
 </div>
 
 <hr style="margin-top:4px;">
