@@ -4,6 +4,7 @@
 
 Cliente offline para Windows
 
+## Instrucciones de instalación
 Descargue todos los archivos en una carpeta del sistema, por ejemplo: `C:/ClienteITVControl`. Podrá crear un acceso directo a `C:/ClienteITVControl/ITVOffline.hta` para ejecutar el cliente más cómodamente.
 
 Al ejecutar `ITVOffline.hta` por primera vez, aparecerá una pantalla mostrando en rojo **OFFLINE** y, debajo, el botón **"Cambiar clave Sync"**. Pulse dicho botón e introduzca la web y la clave proporcionada por el superadministrador.
