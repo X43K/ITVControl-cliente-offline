@@ -12,4 +12,13 @@ A partir de aquí, la aplicación se sincronizará con los datos de su servidor,
 
 En caso de caída del servidor o pérdida de conexión a la red, el cliente mostrará el mensaje **"OFFLINE mostrando datos de caché"** junto con la fecha y hora de la última sincronización.
 
+## Actualizar
 Cuando exista una actualización de esta aplicación, simplemente aparecerá un aviso, al aceptarlo se auto-actualizará y reiniciará la aplicacion sin que tenga que hacer nada más.
+
+## Cómo contribuir
+- Reporta errores en la sección Issues.
+- Sugiere mejoras.
+- Prueba la aplicación y envía feedback.
+
+
+
