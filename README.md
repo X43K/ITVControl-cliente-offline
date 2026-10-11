@@ -11,6 +11,8 @@ Al ejecutar `ITVOffline.hta` por primera vez, aparecerá una pantalla mostrando 
 
 A partir de aquí, la aplicación se sincronizará con los datos de su servidor, mostrando las citas asignadas a la(s) flota(s) a la(s) que esta clave esté asignada.
 
+Puede editar los avisos de próximos vencimientos en el boton **"Ajustes avisos"**
+
 En caso de caída del servidor o pérdida de conexión a la red, el cliente mostrará el mensaje **"OFFLINE mostrando datos de caché"** junto con la fecha y hora de la última sincronización.
 
 ## Actualizar
